@@ -1,0 +1,187 @@
+<html><head><base href="https://www.starbucks-pos-ai.com/" /><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Starbucks AI-Powered POS System</title><style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 0;
+}
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #ffffff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+}
+h1, h2 {
+    color: #006241;
+    text-align: center;
+}
+#orderDisplay {
+    background-color: #f7f7f7;
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-top: 20px;
+    min-height: 100px;
+}
+#micButton {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    background-color: #006241;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    margin-top: 20px;
+}
+#micButton:hover {
+    background-color: #004f35;
+}
+#status {
+    text-align: center;
+    margin-top: 10px;
+    font-style: italic;
+}
+#menu {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+.menu-category {
+    width: 30%;
+    margin-bottom: 20px;
+}
+.menu-category h3 {
+    color: #006241;
+    border-bottom: 2px solid #006241;
+    padding-bottom: 5px;
+}
+.menu-item {
+    margin-bottom: 10px;
+}
+</style></head><body>
+<div class="container">
+    <h1>Starbucks AI-Powered POS System</h1>
+    <button id="micButton">Start Listening</button>
+    <div id="status">Click the button to start listening for an order</div>
+    <div id="orderDisplay"></div>
+    
+    <h2>Starbucks Menu</h2>
+    <div id="menu">
+        <div class="menu-category">
+            <h3>Hot Coffees</h3>
+            <div class="menu-item">Caffè Americano</div>
+            <div class="menu-item">Cappuccino</div>
+            <div class="menu-item">Espresso</div>
+            <div class="menu-item">Flat White</div>
+        </div>
+        <div class="menu-category">
+            <h3>Hot Teas</h3>
+            <div class="menu-item">Chai Tea Latte</div>
+            <div class="menu-item">Earl Grey Tea</div>
+            <div class="menu-item">Green Tea</div>
+        </div>
+        <div class="menu-category">
+            <h3>Cold Drinks</h3>
+            <div class="menu-item">Iced Coffee</div>
+            <div class="menu-item">Cold Brew</div>
+            <div class="menu-item">Iced Tea</div>
+            <div class="menu-item">Frappuccino</div>
+        </div>
+        <div class="menu-category">
+            <h3>Food</h3>
+            <div class="menu-item">Croissant</div>
+            <div class="menu-item">Bagel</div>
+            <div class="menu-item">Sandwich</div>
+        </div>
+    </div>
+</div>
+
+<script>
+let isListening = false;
+let recognition;
+const micButton = document.getElementById('micButton');
+const orderDisplay = document.getElementById('orderDisplay');
+const statusDisplay = document.getElementById('status');
+
+// Initialize speech recognition
+if ('webkitSpeechRecognition' in window) {
+    recognition = new webkitSpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US'; // Set to English, but our API will handle multiple languages
+}
+
+let lastApiCallTime = 0;
+
+recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    statusDisplay.textContent = `Processing: ${transcript}`;
+    sendTranscriptToApi(transcript);
+};
+
+function sendTranscriptToApi(transcript) {
+    const now = Date.now();
+    if (now - lastApiCallTime < 16000) {
+        console.log("Throttling API call");
+        return;
+    }
+    
+    lastApiCallTime = now;
+    
+    fetch('/api/interpret-order', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ speech: transcript }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        orderDisplay.innerHTML += `<p><strong>Order:</strong> ${data.interpretedOrder}</p>`;
+        statusDisplay.textContent = 'Ready for next order';
+        if (isListening) {
+            recognition.start();
+        }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+        if (isListening) {
+            recognition.start();
+        }
+    });
+}
+
+micButton.addEventListener('click', () => {
+    if (!isListening) {
+        isListening = true;
+        micButton.textContent = 'Stop Listening';
+        statusDisplay.textContent = 'Listening for order...';
+        recognition.start();
+    } else {
+        isListening = false;
+        micButton.textContent = 'Start Listening';
+        statusDisplay.textContent = 'Listening stopped';
+        recognition.stop();
+    }
+});
+
+recognition.onerror = (event) => {
+    console.error('Speech recognition error', event.error);
+    statusDisplay.textContent = `Error: ${event.error}`;
+    if (isListening) {
+        recognition.start();
+    }
+};
+
+recognition.onend = () => {
+    if (isListening) {
+        recognition.start();
+    }
+};
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body></html>
