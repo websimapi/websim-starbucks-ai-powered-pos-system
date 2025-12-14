@@ -1,187 +1,437 @@
-<html><head><base href="https://www.starbucks-pos-ai.com/" /><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Starbucks AI-Powered POS System</title><style>
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
-    margin: 0;
-    padding: 0;
-}
-.container {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 20px;
-    background-color: #ffffff;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    display: flex;
-    flex-direction: column;
-}
-h1, h2 {
-    color: #006241;
-    text-align: center;
-}
-#orderDisplay {
-    background-color: #f7f7f7;
-    border: 1px solid #ddd;
-    padding: 15px;
-    margin-top: 20px;
-    min-height: 100px;
-}
-#micButton {
-    display: block;
-    width: 100%;
-    padding: 15px;
-    background-color: #006241;
-    color: white;
-    border: none;
-    cursor: pointer;
-    font-size: 18px;
-    margin-top: 20px;
-}
-#micButton:hover {
-    background-color: #004f35;
-}
-#status {
-    text-align: center;
-    margin-top: 10px;
-    font-style: italic;
-}
-#menu {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-around;
-    margin-top: 20px;
-}
-.menu-category {
-    width: 30%;
-    margin-bottom: 20px;
-}
-.menu-category h3 {
-    color: #006241;
-    border-bottom: 2px solid #006241;
-    padding-bottom: 5px;
-}
-.menu-item {
-    margin-bottom: 10px;
-}
-</style></head><body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starbucks AI-Powered POS System</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        }
+        header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #006241;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #006241;
+            margin: 0;
+            font-size: 24px;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        #micButton {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #006241;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #micButton.listening {
+            background-color: #d62b20;
+            animation: pulse 1.5s infinite;
+        }
+        #micButton:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(214, 43, 32, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(214, 43, 32, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(214, 43, 32, 0); }
+        }
+        #status {
+            font-style: italic;
+            color: #666;
+            height: 20px;
+        }
+        .transcript-box {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            min-height: 60px;
+            position: relative;
+        }
+        .transcript-label {
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background: #fff;
+            padding: 0 5px;
+            font-size: 12px;
+            color: #999;
+        }
+        #liveTranscript {
+            font-size: 16px;
+            line-height: 1.4;
+        }
+        .interim {
+            color: #888;
+        }
+        .order-panel {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .order-header {
+            background-color: #006241;
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        #orderList {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .order-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        .item-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .item-note {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 30px;
+            opacity: 0.6;
+            pointer-events: none; /* Just for reference */
+        }
+        .menu-card {
+            border: 1px solid #eee;
+            padding: 10px;
+            text-align: center;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .ai-response {
+            background-color: #e8f5e9;
+            border-left: 4px solid #006241;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
 <div class="container">
-    <h1>Starbucks AI-Powered POS System</h1>
-    <button id="micButton">Start Listening</button>
-    <div id="status">Click the button to start listening for an order</div>
-    <div id="orderDisplay"></div>
-    
-    <h2>Starbucks Menu</h2>
-    <div id="menu">
-        <div class="menu-category">
-            <h3>Hot Coffees</h3>
-            <div class="menu-item">Caffè Americano</div>
-            <div class="menu-item">Cappuccino</div>
-            <div class="menu-item">Espresso</div>
-            <div class="menu-item">Flat White</div>
+    <header>
+        <h1>Starbucks AI POS</h1>
+    </header>
+
+    <div class="controls">
+        <button id="micButton" title="Toggle Microphone">
+            🎤
+        </button>
+        <div id="status">Tap microphone to start order</div>
+    </div>
+
+    <div class="transcript-box">
+        <span class="transcript-label">Live Transcript</span>
+        <div id="liveTranscript"></div>
+    </div>
+
+    <div id="aiResponse" class="ai-response"></div>
+
+    <div class="order-panel">
+        <div class="order-header">
+            <span>Current Order</span>
+            <span id="itemCount">0 items</span>
         </div>
-        <div class="menu-category">
-            <h3>Hot Teas</h3>
-            <div class="menu-item">Chai Tea Latte</div>
-            <div class="menu-item">Earl Grey Tea</div>
-            <div class="menu-item">Green Tea</div>
-        </div>
-        <div class="menu-category">
-            <h3>Cold Drinks</h3>
-            <div class="menu-item">Iced Coffee</div>
-            <div class="menu-item">Cold Brew</div>
-            <div class="menu-item">Iced Tea</div>
-            <div class="menu-item">Frappuccino</div>
-        </div>
-        <div class="menu-category">
-            <h3>Food</h3>
-            <div class="menu-item">Croissant</div>
-            <div class="menu-item">Bagel</div>
-            <div class="menu-item">Sandwich</div>
-        </div>
+        <ul id="orderList">
+            <!-- Items will appear here -->
+        </ul>
+    </div>
+
+    <div class="menu-grid">
+        <div class="menu-card">Caffè Americano</div>
+        <div class="menu-card">Cappuccino</div>
+        <div class="menu-card">Flat White</div>
+        <div class="menu-card">Chai Tea Latte</div>
+        <div class="menu-card">Iced Coffee</div>
+        <div class="menu-card">Frappuccino</div>
+        <div class="menu-card">Croissant</div>
+        <div class="menu-card">Impossible™ Breakfast Sandwich</div>
     </div>
 </div>
 
-<script>
-let isListening = false;
-let recognition;
-const micButton = document.getElementById('micButton');
-const orderDisplay = document.getElementById('orderDisplay');
-const statusDisplay = document.getElementById('status');
+<script type="module">
+    const micButton = document.getElementById('micButton');
+    const statusDisplay = document.getElementById('status');
+    const liveTranscript = document.getElementById('liveTranscript');
+    const orderList = document.getElementById('orderList');
+    const itemCountDisplay = document.getElementById('itemCount');
+    const aiResponseDisplay = document.getElementById('aiResponse');
 
-// Initialize speech recognition
-if ('webkitSpeechRecognition' in window) {
-    recognition = new webkitSpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US'; // Set to English, but our API will handle multiple languages
-}
+    // State
+    let isListening = false;
+    let recognition;
+    let silenceTimer;
+    let currentOrder = [];
+    let isProcessing = false;
 
-let lastApiCallTime = 0;
+    // Initialize Speech Recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    statusDisplay.textContent = `Processing: ${transcript}`;
-    sendTranscriptToApi(transcript);
-};
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
 
-function sendTranscriptToApi(transcript) {
-    const now = Date.now();
-    if (now - lastApiCallTime < 16000) {
-        console.log("Throttling API call");
-        return;
+        recognition.onstart = () => {
+            isListening = true;
+            micButton.classList.add('listening');
+            statusDisplay.textContent = "Listening... (Pause for 2s to submit)";
+        };
+
+        recognition.onend = () => {
+            isListening = false;
+            micButton.classList.remove('listening');
+            if (!isProcessing) {
+                statusDisplay.textContent = "Microphone stopped.";
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error', event.error);
+            if (event.error === 'no-speech') {
+                return; 
+            }
+            statusDisplay.textContent = "Error: " + event.error;
+            isListening = false;
+            micButton.classList.remove('listening');
+        };
+
+        recognition.onresult = (event) => {
+            if (isProcessing) return;
+
+            let finalTranscript = '';
+            let interimTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+
+            // Update UI
+            if (finalTranscript || interimTranscript) {
+                liveTranscript.innerHTML = `<span>${finalTranscript}</span> <span class="interim">${interimTranscript}</span>`;
+            }
+
+            // Silence Detection Logic
+            clearTimeout(silenceTimer);
+            
+            // Only set timer if we have some input
+            if (finalTranscript.trim().length > 0 || interimTranscript.trim().length > 0) {
+                statusDisplay.textContent = "Listening... (Speak now)";
+                
+                // Wait 2 seconds of silence before processing
+                silenceTimer = setTimeout(() => {
+                    handleSilence(finalTranscript + " " + interimTranscript);
+                }, 2000);
+            }
+        };
+    } else {
+        micButton.disabled = true;
+        statusDisplay.textContent = "Speech recognition not supported in this browser.";
     }
-    
-    lastApiCallTime = now;
-    
-    fetch('/api/interpret-order', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ speech: transcript }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        orderDisplay.innerHTML += `<p><strong>Order:</strong> ${data.interpretedOrder}</p>`;
-        statusDisplay.textContent = 'Ready for next order';
-        if (isListening) {
-            recognition.start();
+
+    async function handleSilence(fullText) {
+        if (!fullText.trim()) return;
+        
+        console.log("Silence detected. Processing:", fullText);
+        stopListening();
+        isProcessing = true;
+        statusDisplay.textContent = "Processing order with AI...";
+        micButton.disabled = true;
+
+        try {
+            await processOrderWithAI(fullText);
+        } catch (error) {
+            console.error("AI Processing Error:", error);
+            statusDisplay.textContent = "Error processing order.";
+        } finally {
+            isProcessing = false;
+            micButton.disabled = false;
+            statusDisplay.textContent = "Ready. Tap mic to continue ordering.";
+            liveTranscript.innerHTML = ""; // Clear for next round
         }
-    })
-    .catch((error) => {
-        console.error('Error:', error);
+    }
+
+    function startListening() {
+        if (recognition && !isListening) {
+            try {
+                recognition.start();
+            } catch (e) {
+                console.warn("Recognition already started");
+            }
+        }
+    }
+
+    function stopListening() {
+        if (recognition && isListening) {
+            recognition.stop();
+        }
+    }
+
+    micButton.addEventListener('click', () => {
         if (isListening) {
-            recognition.start();
+            stopListening();
+            clearTimeout(silenceTimer);
+        } else {
+            startListening();
         }
     });
-}
 
-micButton.addEventListener('click', () => {
-    if (!isListening) {
-        isListening = true;
-        micButton.textContent = 'Stop Listening';
-        statusDisplay.textContent = 'Listening for order...';
-        recognition.start();
-    } else {
-        isListening = false;
-        micButton.textContent = 'Start Listening';
-        statusDisplay.textContent = 'Listening stopped';
-        recognition.stop();
-    }
-});
+    async function processOrderWithAI(text) {
+        // Construct the messages for the AI
+        const messages = [
+            {
+                role: "system",
+                content: `You are an intelligent Starbucks Point of Sale system. 
+                Your goal is to parse natural language voice orders into structured data.
+                
+                Instructions:
+                1. Analyze the customer's speech: "${text}"
+                2. Identify ordered items. If the user speaks a foreign language, translate to English menu items.
+                3. Update the order list.
+                4. Generate a very brief, friendly spoken response (TTS) to confirm the order or ask for clarification.
+                
+                Current Menu Context: Coffees, Teas, Frappuccinos, Pastries, Sandwiches.
+                
+                Output MUST be valid JSON in this format:
+                {
+                    "added_items": [
+                        {"name": "Item Name", "qty": 1, "note": "details (size, milk, etc)"}
+                    ],
+                    "spoken_response": "Text to speak back to user"
+                }
+                `
+            },
+            {
+                role: "user",
+                content: text
+            }
+        ];
 
-recognition.onerror = (event) => {
-    console.error('Speech recognition error', event.error);
-    statusDisplay.textContent = `Error: ${event.error}`;
-    if (isListening) {
-        recognition.start();
-    }
-};
+        // Call the AI
+        const completion = await websim.chat.completions.create({
+            messages: messages,
+            json: true
+        });
 
-recognition.onend = () => {
-    if (isListening) {
-        recognition.start();
+        const result = JSON.parse(completion.content);
+
+        // Update UI with new items
+        if (result.added_items && result.added_items.length > 0) {
+            result.added_items.forEach(item => {
+                currentOrder.push(item);
+                addOrderItemToDisplay(item);
+            });
+            updateItemCount();
+        }
+
+        // Show AI Response
+        if (result.spoken_response) {
+            aiResponseDisplay.style.display = 'block';
+            aiResponseDisplay.textContent = "AI: " + result.spoken_response;
+            
+            // Speak the response
+            await playTTS(result.spoken_response);
+        }
     }
-};
+
+    function addOrderItemToDisplay(item) {
+        const li = document.createElement('li');
+        li.className = 'order-item';
+        li.innerHTML = `
+            <div>
+                <div class="item-name">${item.qty}x ${item.name}</div>
+                <div class="item-note">${item.note || ''}</div>
+            </div>
+            <div>$${(Math.random() * 4 + 3).toFixed(2)}</div>
+        `;
+        orderList.appendChild(li);
+    }
+
+    function updateItemCount() {
+        const count = currentOrder.reduce((acc, item) => acc + item.qty, 0);
+        itemCountDisplay.textContent = `${count} items`;
+    }
+
+    async function playTTS(text) {
+        statusDisplay.textContent = "AI Speaking...";
+        try {
+            const ttsResult = await websim.textToSpeech({
+                text: text,
+                voice: "en-US-JennyNeural" 
+            });
+            
+            const audio = new Audio(ttsResult.url);
+            await new Promise((resolve) => {
+                audio.onended = resolve;
+                audio.onerror = resolve;
+                audio.play().catch(e => {
+                    console.error("Audio play failed", e);
+                    resolve();
+                });
+            });
+        } catch (e) {
+            console.error("TTS failed", e);
+        }
+    }
+
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-</body></html>
+</body>
+</html>
